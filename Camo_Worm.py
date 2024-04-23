@@ -126,10 +126,10 @@ class Clew():
             [0, imshape[1]],      # x
             [0, imshape[0]],      # y
             [10, 100],            # r
-            [0, np.pi],           # theta
+            [0, 2 * np.pi],       # theta
             [10, 50],             # dr
-            [0, np.pi],           # dgamma
-            [0, 5],              # width
+            [0, 2 * np.pi],       # dgamma
+            [1, 10],              # width
             [0, 255]              # colour
         ])
         return np.tile(bounds, (num_worms, 1))
