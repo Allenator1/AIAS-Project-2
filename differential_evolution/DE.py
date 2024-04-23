@@ -2,6 +2,9 @@ import numpy as np
 
 
 class DE:
+	"""
+    Original Differential Evolution algorithm.
+    """
 	def __init__(self, objective_function, bounds, NP=10, max_iter=1000, F=0.5, CR=0.9):
 		self.objective_function = objective_function
 		self.bounds = bounds
@@ -14,6 +17,7 @@ class DE:
 
 
 	def iterate(self):
+		"""Perform a single iteration of DE."""
 		for i in range(self.NP):
 			# Select three random indices
 			r1, r2, r3 = np.random.choice(self.NP, 3, replace=False)
@@ -36,6 +40,7 @@ class DE:
 
 	
 	def get_best(self):
+		"""Return the index of the best individual in the population."""
 		return np.argmin([self.objective_function(x) for x in self.population])
 	
 
