@@ -7,6 +7,8 @@ from sklearn.metrics.pairwise import euclidean_distances
 
 import util
 
+from differential_evolution.DE import Target
+
 
 Path = mpath.Path
 rng = np.random.default_rng()
@@ -41,7 +43,8 @@ class Camo_Worm:
 
     def patch(self):
         """Get the patch of the worm."""
-        return mpatches.PathPatch(self.path(), fc='None', ec='black', lw=self.width, capstyle='round')
+        rgb_col = (self.colour / 255, self.colour / 255, self.colour / 255)
+        return mpatches.PathPatch(self.path(), fc='None', ec=rgb_col, lw=self.width, capstyle='round')
 
     def intermediate_points(self, intervals=None):
         """
@@ -72,7 +75,7 @@ class Camo_Worm:
 
     def get_params(self):
         """Get worm parameters."""
-        return [self.x, self.y, self.r, self.theta, self.dr, self.dgamma, self.width, self.colour]
+        return np.array([self.x, self.y, self.r, self.theta, self.dr, self.dgamma, self.width, self.colour])
 
     @staticmethod
     def random_worm(imshape, init_params):
@@ -88,7 +91,7 @@ class Camo_Worm:
         colour = rng.integers(0, 256)  # Random grayscale value
         width = width_theta * rng.standard_gamma(3)
         return Camo_Worm(midx, midy, r, theta, dr, dgamma, width, colour)
-
+    
     @staticmethod
     def random_clew(size, imshape, init_params):
         """Generate a random clew of worms."""
@@ -96,6 +99,40 @@ class Camo_Worm:
         for i in range(size):
             clew.append(Camo_Worm.random_worm(imshape, init_params))
         return clew
+    
+
+class Clew():
+    def __init__(self, bounds, vector=None):
+        self.bounds = bounds
+        if vector is not None:
+            self.vector = vector
+        else:
+            self.vector = np.random.uniform(bounds[:, 0], bounds[:, 1])
+        
+        self.worms = [Camo_Worm(*self.vector[i:i+8]) for i in range(0, len(self.vector), 8)]
+    
+    def __getitem__(self, key):
+        return self.worms[key]
+    
+    def __iter__(self):
+        return iter(self.worms)
+    
+    def __len__(self):
+        return len(self.worms)
+
+    @staticmethod
+    def generate_bounds(num_worms, imshape):
+        bounds = np.array([
+            [0, imshape[1]],      # x
+            [0, imshape[0]],      # y
+            [10, 100],            # r
+            [0, 2 * np.pi],       # theta
+            [10, 50],             # dr
+            [0, 2 * np.pi],       # dgamma
+            [1, 10],              # width
+            [0, 255]              # colour
+        ])
+        return np.tile(bounds, (num_worms, 1))
 
 
 ## TEST USAGE
