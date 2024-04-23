@@ -8,7 +8,7 @@ from cost_function.robbie import simplified_cost
 from Camo_Worm import Camo_Worm, Clew
 import util
 
-NUM_WORMS = 10
+NUM_WORMS = 50
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -28,7 +28,7 @@ if __name__ == '__main__':
         objective_function=cost_fn,
         bounds=bounds,
         initial_population=initial_population,
-        max_iter=100,        
+        max_iter=10,        
         F=0.5,
         CR=0.9
     )
