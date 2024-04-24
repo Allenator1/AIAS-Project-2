@@ -1,6 +1,6 @@
 import numpy as np
 
-def simplified_cost(clew, image):
+def straighten_worm(clew):
     """
     Simplified cost function.
     """
@@ -13,9 +13,12 @@ def simplified_cost(clew, image):
 
         # Calculate the deviation from a straight line
         straight_diff = abs(worm.approx_length() - np.linalg.norm(intermediate_points[-1] - intermediate_points[0]))
-        length_diff = abs(worm.approx_length() - desired_length)
+        straight_diff = np.exp(straight_diff) - 1
+        
+        # Calculate the length difference from the desired length
+        # length_diff = abs(worm.approx_length() - desired_length)
 
         # Combine the length difference and deviation into a single cost value
-        total_cost += 0.05 * length_diff + straight_diff
+        total_cost += straight_diff
 
     return total_cost
