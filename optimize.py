@@ -6,7 +6,8 @@ from PIL import Image
 from differential_evolution.DE import DE
 from cost_function.robbie import straighten_worm
 from cost_function.allen import maximise_distances
-from Camo_Worm import Camo_Worm, Clew
+from cost_function.yi import gen_variance_grid, adapt_to_variance
+from Camo_Worm import _, Clew
 import util
 
 NUM_WORMS = 10
@@ -16,7 +17,12 @@ def final_cost(clew, image):
     """
     Final cost function that combines the cost functions from Robbie and Allen.
     """
-    return straighten_worm(clew) + maximise_distances(clew)
+    grid_shape = (30, 30)
+    grid_variances = gen_variance_grid(image, grid_shape)
+    variance_cost = adapt_to_variance(clew, grid_variances, image)
+    straighten_cost = straighten_worm(clew)
+    distance_cost = maximise_distances(clew)
+    return variance_cost
 
 
 if __name__ == '__main__':
@@ -37,7 +43,7 @@ if __name__ == '__main__':
         objective_function=cost_fn,
         bounds=bounds,
         initial_population=initial_population,
-        max_iter=100,        
+        max_iter=10,        
         F=0.5,
         CR=0.9
     )
