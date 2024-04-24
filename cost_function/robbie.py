@@ -5,7 +5,6 @@ def straighten_worm(clew):
     Calculate the cost of a clew of worms based on the deviation from a straight line.
     """
     total_cost = 0
-    desired_length = 100
 
     for worm in clew:
         # Get the intermediate points along the worm's path
