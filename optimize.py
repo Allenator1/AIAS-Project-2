@@ -43,7 +43,7 @@ if __name__ == '__main__':
         objective_function=cost_fn,
         bounds=bounds,
         initial_population=initial_population,
-        max_iter=100,        
+        max_iter=10,        
         F=0.5,
         CR=0.9
     )
