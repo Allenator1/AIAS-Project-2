@@ -4,11 +4,20 @@ import sys
 from PIL import Image
 
 from differential_evolution.DE import DE
-from cost_function.robbie import simplified_cost
+from cost_function.robbie import straighten_worm
+from cost_function.allen import maximise_distances
 from Camo_Worm import Camo_Worm, Clew
 import util
 
 NUM_WORMS = 10
+
+
+def final_cost(clew, image):
+    """
+    Final cost function that combines the cost functions from Robbie and Allen.
+    """
+    return straighten_worm(clew) + maximise_distances(clew)
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -21,7 +30,7 @@ if __name__ == '__main__':
     bounds = Clew.generate_bounds(NUM_WORMS, image.shape)
     initial_population = [Clew(bounds) for _ in range(NUM_WORMS)]
 
-    cost_fn = lambda x: simplified_cost(x, image)
+    cost_fn = lambda x: final_cost(x, image)
 
     # Create an instance of the DE algorithm
     de = DE(
@@ -36,7 +45,7 @@ if __name__ == '__main__':
     # Run the DE algorithm
     while de.generation < de.max_iter:
         de.iterate()
-        print(f"Generation {de.generation}: Best cost = {simplified_cost(de.get_best(), image)}")
+        print(f"Generation {de.generation}: Best cost = {cost_fn(de.get_best())}")
 
     # Get the best clew
     best_clew = de.get_best()
