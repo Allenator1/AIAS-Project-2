@@ -9,7 +9,7 @@ def simplified_cost_worm_density(clew, image):
 
 '''
 
-/ simple cost function that penalises high worm density based on distance of worms
+# simple cost function that penalises high worm density based on distance of worms
 def simplified_cost_worm_density(clew, image):
     """Calculate the cost of a clew of worms."""
     worm_density = 0
