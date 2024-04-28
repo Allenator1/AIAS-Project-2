@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.path as mpath
 import matplotlib.patches as mpatches
 import matplotlib.bezier as mbezier
+import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import euclidean_distances
 
 import util
@@ -32,6 +33,14 @@ class Camo_Worm:
         p2 = [self.x + self.r * np.cos(self.theta), self.y + self.r * np.sin(self.theta)]
         p1 = [self.x + self.dr * np.cos(self.theta + self.dgamma), self.y + self.dr * np.sin(self.theta + self.dgamma)]
         self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
+        
+        worm_length = self.approx_length()
+        n_intervals = int(worm_length // self.width)
+        if n_intervals > 0:
+            start = 1 / (2 * n_intervals); end = 1 - 1 / (2 * n_intervals)
+            self.window_points = self.bezier.point_at_t(np.linspace(start, end, n_intervals))
+        else:
+            self.window_points = [self.bezier.point_at_t(0.5)]
 
     def control_points(self):
         """Get control points of the Bezier curve."""
@@ -44,7 +53,7 @@ class Camo_Worm:
     def patch(self):
         """Get the patch of the worm."""
         rgb_col = (self.colour / 255, self.colour / 255, self.colour / 255)
-        return mpatches.PathPatch(self.path(), fc='None', ec=rgb_col, lw=self.width, capstyle='round')
+        return mpatches.PathPatch(self.path(), fc='None', ec="White", lw=self.width, capstyle='round')
 
     def intermediate_points(self, intervals=None):
         """
@@ -76,6 +85,17 @@ class Camo_Worm:
     def get_params(self):
         """Get worm parameters."""
         return np.array([self.x, self.y, self.r, self.theta, self.dr, self.dgamma, self.width, self.colour])
+    
+    def get_worm_vals(self, image):
+        worm_vals = []
+        for x, y in self.window_points:
+            xstart = max(0, x - self.width // 2)
+            xend = min(x + self.width // 2, image.shape[1])
+            ystart = max(0, y - self.width // 2)
+            yend = min(y + self.width // 2, image.shape[0])
+            vals = np.reshape(image[int(ystart):int(yend), int(xstart):int(xend)], -1)
+            worm_vals.append(vals)
+        return np.concatenate(worm_vals)
 
     @staticmethod
     def random_worm(imshape, init_params):
@@ -137,17 +157,19 @@ class Clew():
 
 ## TEST USAGE
 if __name__ == "__main__":
-	image_dir = 'images'
-	image_name='original'
-	mask = [320, 560, 160, 880] 	# ymin ymax xmin xmax
+    image_dir = 'images'
+    image_name='original'
+    mask = [320, 560, 160, 880] 	# ymin ymax xmin xmax
     
-	image = util.prep_image(image_dir, image_name, mask)
+    image = util.prep_image(image_dir, image_name, mask)
     
-	clew = Camo_Worm.random_clew(40, image.shape, (40, 30, 1))
-	drawing = util.Drawing(image)
-	drawing.add_worms(clew)
-	drawing.show()
-    
+    worm = Camo_Worm.random_worm(image.shape[:2], (40, 30, 5))
+    fig, ax = plt.subplots()
+    ax.imshow(image, cmap='gray', origin='lower')
+    ax.add_patch(worm.patch())
+
+    worm_vals = worm.get_worm_vals(image)
+    print(worm_vals)
     
 
 
