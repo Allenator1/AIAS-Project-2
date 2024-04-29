@@ -5,9 +5,9 @@ from PIL import Image
 import cv2
 
 from differential_evolution.DE import DE
-from cost_function.robbie import straighten_worm
-from cost_function.allen import maximise_distances
-from cost_function.yi import gen_variance_grid, adapt_to_variance
+from cost_function.robbie import *
+from cost_function.allen import *
+from cost_function.yi import *
 from Camo_Worm import Camo_Worm, Clew
 import util
 
