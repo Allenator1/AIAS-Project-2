@@ -86,16 +86,15 @@ class Camo_Worm:
         """Get worm parameters."""
         return np.array([self.x, self.y, self.r, self.theta, self.dr, self.dgamma, self.width, self.colour])
     
-    def get_worm_vals(self, image):
-        worm_vals = []
+    def get_worm_inds(self, image):
+        worm_slices = []
         for x, y in self.window_points:
             xstart = max(0, x - self.width // 2)
             xend = min(x + self.width // 2, image.shape[1])
             ystart = max(0, y - self.width // 2)
             yend = min(y + self.width // 2, image.shape[0])
-            vals = np.reshape(image[int(ystart):int(yend), int(xstart):int(xend)], -1)
-            worm_vals.append(vals)
-        return np.concatenate(worm_vals)
+            worm_slices.append((slice(ystart, yend), slice(xstart, xend)))
+        return worm_slices
 
     @staticmethod
     def random_worm(imshape, init_params):
