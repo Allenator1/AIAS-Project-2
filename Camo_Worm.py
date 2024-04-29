@@ -19,7 +19,7 @@ class Camo_Worm:
     """
     Class representing a camouflage worm.
     """
-    def __init__(self, x, y, r, theta, deviation_r, deviation_gamma, width, colour):
+    def __init__(self, x, y, r, theta, deviation_r, deviation_gamma, width, colour, imshape):
         self.x = x
         self.y = y
         self.r = r
@@ -34,13 +34,22 @@ class Camo_Worm:
         p1 = [self.x + self.dr * np.cos(self.theta + self.dgamma), self.y + self.dr * np.sin(self.theta + self.dgamma)]
         self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
         
-        worm_length = self.approx_length()
-        n_intervals = int(worm_length // self.width)
+        n_intervals = int(self.approx_length() // self.width)
+        self.n_intervals = n_intervals
+        self.worm_slices = []
+
         if n_intervals > 0:
             start = 1 / (2 * n_intervals); end = 1 - 1 / (2 * n_intervals)
-            self.window_points = self.bezier.point_at_t(np.linspace(start, end, n_intervals))
-        else:
-            self.window_points = [self.bezier.point_at_t(0.5)]
+            window_points = self.bezier.point_at_t(np.linspace(start, end, n_intervals))
+
+            for x, y in window_points:
+                xstart = int(x - self.width // 2)
+                xend = int(x + self.width // 2)
+                ystart = int(y - self.width // 2)
+                yend = int(y + self.width // 2)
+                
+                if xstart > 0 and xend < imshape[1] and ystart > 0 and yend < imshape[0]:
+                    self.worm_slices.append((slice(ystart, yend), slice(xstart, xend)))
 
     def control_points(self):
         """Get control points of the Bezier curve."""
@@ -128,7 +137,8 @@ class Clew():
         else:
             self.vector = np.random.uniform(bounds[:, 0], bounds[:, 1])
         
-        self.worms = [Camo_Worm(*self.vector[i:i+8]) for i in range(0, len(self.vector), 8)]
+        height = bounds[1, 1]; width = bounds[0, 1]
+        self.worms = [Camo_Worm(*self.vector[i:i+8], imshape=(height, width)) for i in range(0, len(self.vector), 8)]
     
     def __getitem__(self, key):
         return self.worms[key]
@@ -148,7 +158,7 @@ class Clew():
             [0, np.pi],           # theta
             [10, 50],             # dr
             [0, np.pi],           # dgamma
-            [0, 5],              # width
+            [2, 20],              # width
             [0, 255]              # colour
         ])
         return np.tile(bounds, (num_worms, 1))
