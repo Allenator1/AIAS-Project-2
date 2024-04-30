@@ -5,10 +5,9 @@ from PIL import Image
 import cv2
 
 from differential_evolution.DE import DE
-from cost_function.robbie import *
-from cost_function.allen import *
+from cost import *
 from cost_function.yi import *
-from Camo_Worm import Camo_Worm, Clew
+from Camo_Worm import Camo_Worm
 import util
 
 NUM_WORMS = 50
