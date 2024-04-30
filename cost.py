@@ -5,9 +5,10 @@ def maximise_global_variance(worm, variance_map):
     """
     Maximise the global variance that the worms cover.
     """
-    scaling_constant = 10
-    variances = np.reshape([variance_map[y1:y2, x1:x2] for x1, x2, y1, y2 in worm.worm_slices], -1)
-    return scaling_constant / (np.sum(variances) + 1.0)
+    scaling_constant = 1000
+    vars = [variance_map[y1:y2, x1:x2] for x1, x2, y1, y2 in worm.worm_slices]
+    vars = np.hstack([a.flatten() for a in vars])
+    return scaling_constant / np.sum(vars)
 
 
 def minimise_local_variance(worm, img_map):
@@ -15,7 +16,8 @@ def minimise_local_variance(worm, img_map):
     Minimise the variance of the image area that the worms cover
     """
     scaling_constant = 1 / 10
-    img_vals = np.reshape([img_map[y1:y2, x1:x2] for x1, x2, y1, y2 in worm.worm_slices], -1)
+    img_vals = [img_map[y1:y2, x1:x2] for x1, x2, y1, y2 in worm.worm_slices]
+    img_vals = np.hstack([a.flatten() for a in img_vals])
     return np.std(img_vals) * scaling_constant
 
 
