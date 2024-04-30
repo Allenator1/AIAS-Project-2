@@ -10,16 +10,16 @@ from cost_function.yi import *
 from Camo_Worm import Camo_Worm
 import util
 
-POPULATION_SIZE = 10
+POPULATION_SIZE = 100
 
 
 def final_cost(worm, var_map, image):
     """
     Final cost function that combines the cost functions from Robbie and Allen.
     """
-    variance_cost = maximise_global_variance(worm, var_map)
-    # camo_cost = minimise_local_variance(worm, image)
-    return variance_cost
+    camo_cost = minimise_local_variance(worm, image)
+    var_cost = maximise_global_variance(worm, var_map)
+    return camo_cost + var_cost
 
 
 if __name__ == '__main__':
@@ -29,16 +29,16 @@ if __name__ == '__main__':
         image_path = 'images/original.png'
     image = np.array(Image.open(image_path).convert('L'))
     image = np.flipud(image)
+    image = image[350:550, :]
 
     height, width = image.shape
-    worm_bounds = (0, width, 0, height)
+    worm_bounds = (0, width, 0, 200)
     bounds = Camo_Worm.generate_bounds(worm_bounds)
     initial_population = [Camo_Worm(bounds) for _ in range(POPULATION_SIZE)]
 
     gaussian_img = cv2.GaussianBlur(image, (5, 5), 0, borderType=cv2.BORDER_REPLICATE)
-    median_img = cv2.medianBlur(image, 5)
+    median_img = cv2.medianBlur(image, 11)
     var_map = np.abs(cv2.Laplacian(gaussian_img, cv2.CV_64F, borderType=cv2.BORDER_REPLICATE))
-    var_map = cv2.normalize(var_map, None, 0, 1, cv2.NORM_MINMAX)
 
     cost_fn = lambda x: final_cost(x, var_map, median_img)
 
@@ -47,9 +47,9 @@ if __name__ == '__main__':
         objective_function=cost_fn,
         bounds=bounds,
         initial_population=initial_population,
-        max_iter=1000,        
-        F=0.5,
-        CR=0.9
+        max_iter=100,        
+        F=0.1,
+        CR=0.5
     )
 
     # Run the DE algorithm
