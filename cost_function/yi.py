@@ -60,3 +60,16 @@ def adapt_to_variance(clew, grid_variances, image,grid_shape):
     total_worm_area = np.sum(worm_areas)
     normalized_std = std_product / (total_worm_area**2)
     return normalized_std
+
+def more_worms_to_high_variance_area(clew, grid_variances,image,grid_shape):
+    worm_mean_variances_list=[]
+    for worm in clew:
+        worm_matri=worm_matrix(worm, image)
+        a=binary_image_into_grid(worm_matri, grid_shape)
+        b=a*grid_variances
+        if len(b[b != 0]) > 0:
+            worm_neighbourhood_variance = np.mean(b[b != 0])
+        else:
+            worm_neighbourhood_variance = 0  
+        worm_mean_variances_list.append(worm_neighbourhood_variance)
+    return 1000/(np.mean(worm_mean_variances_list))
