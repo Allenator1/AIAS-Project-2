@@ -12,7 +12,7 @@ from differential_evolution.DE import Target
 
 
 Path = mpath.Path
-rng = np.random.default_rng()
+rng = np.random.default_rng(seed=0)
 
 
 class Camo_Worm:
@@ -27,29 +27,36 @@ class Camo_Worm:
         x, y, r, theta, dr, dgamma, self.width = self.vector
         self.colour = 255
 
+        (xl, xu), (yl, yu) = bounds[0:2]
+
         p0 = [x - r * np.cos(theta), y - r * np.sin(theta)]
         p2 = [x + r * np.cos(theta), y + r * np.sin(theta)]
         p1 = [x + dr * np.cos(theta + dgamma), y + dr * np.sin(theta + dgamma)]
-        self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
+
+        control_points = np.array([p0, p1, p2])
+        control_points = np.clip(control_points, [xl, yl], [xu, yu])
+
+        self.bezier = mbezier.BezierSegment(control_points)
         
         n_intervals = int(self.approx_length() // self.width)
-        self.n_intervals = n_intervals
-        self.worm_slices = []
 
-        if n_intervals > 0:
+        if n_intervals > 1:
             start = 1 / (2 * n_intervals); end = 1 - 1 / (2 * n_intervals)
             window_points = self.bezier.point_at_t(np.linspace(start, end, n_intervals))
+        else:
+            window_points = [self.bezier.point_at_t(0.5)]
 
-            for x, y in window_points:
-                xstart = int(x - self.width // 2)
-                xend = int(x + self.width // 2)
-                ystart = int(y - self.width // 2)
-                yend = int(y + self.width // 2)
+        self.worm_slices = []
+        for wx, wy in window_points:
+            xstart = wx - self.width // 2
+            xend = wx + self.width // 2
+            ystart = wy - self.width // 2
+            yend = wy + self.width // 2
 
-                (x1, x2), (y1, y2) = bounds[0:2]
-                
-                if xstart > x1 and xend < x2 and ystart > y1 and yend < y2:
-                    self.worm_slices.append([ystart, yend, xstart, xend])
+            bounds = np.array([xstart, xend, ystart, yend])
+            bounds = np.clip(bounds, [xl, xl, yl, yl], [xu, xu, yu, yu]).astype(int)
+
+            self.worm_slices.append(bounds)
 
     def control_points(self):
         """Get control points of the Bezier curve."""
@@ -64,7 +71,7 @@ class Camo_Worm:
         rgb_col = (self.colour / 255, self.colour / 255, self.colour / 255)
         return mpatches.PathPatch(self.path(), fc='None', ec=rgb_col, lw=self.width, capstyle='round')
 
-    def intermediate_points(self, intervals=None):
+    def intermediate_points(self, intervals=3):
         """
         Get intermediate points along the worm's path.
 
@@ -114,7 +121,7 @@ class Camo_Worm:
     
     @staticmethod
     def generate_bounds(worm_bounds):
-        (x1, y1), (x2, y2) = worm_bounds
+        x1, x2, y1, y2 = worm_bounds
         min_dim = min(x2 - x1, y2 - y1)
         r_min = min_dim / 20
         r_max = min_dim / 4
@@ -139,10 +146,10 @@ if __name__ == "__main__":
     
     image = util.prep_image(image_dir, image_name, mask)
     
-    worm = Camo_Worm.random_worm(image.shape[:2], (40, 30, 5))
-    fig, ax = plt.subplots()
-    ax.imshow(image, cmap='gray', origin='lower')
-    ax.add_patch(worm.patch())
+    # worm = Camo_Worm.random_worm(image.shape[:2], (40, 30, 5))
+    # fig, ax = plt.subplots()
+    # ax.imshow(image, cmap='gray', origin='lower')
+    # ax.add_patch(worm.patch())
     
 
 
