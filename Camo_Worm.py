@@ -12,7 +12,7 @@ from differential_evolution.DE import Target
 
 
 Path = mpath.Path
-rng = np.random.default_rng(seed=0)
+rng = np.random.default_rng()
 
 
 class Camo_Worm:
@@ -38,25 +38,30 @@ class Camo_Worm:
 
         self.bezier = mbezier.BezierSegment(control_points)
         
-        n_intervals = int(self.approx_length() // self.width)
-
-        if n_intervals > 1:
-            start = 1 / (2 * n_intervals); end = 1 - 1 / (2 * n_intervals)
-            window_points = self.bezier.point_at_t(np.linspace(start, end, n_intervals))
+        window_size = 1.1 * self.width
+        n_intervals = int(np.round(self.approx_length() / (window_size * 2)))
+        if n_intervals > 2:
+            window_points = self.bezier.point_at_t(np.linspace(0, 1, n_intervals))
         else:
-            window_points = [self.bezier.point_at_t(0.5)]
+            window_points = self.bezier.point_at_t([0, 0.5, 1.0])
 
-        self.worm_slices = []
+        worm_slices = []
         for wx, wy in window_points:
-            xstart = wx - self.width // 2
-            xend = wx + self.width // 2
-            ystart = wy - self.width // 2
-            yend = wy + self.width // 2
+            xstart = wx - window_size
+            xend = wx + window_size
+            ystart = wy - window_size
+            yend = wy + window_size
 
             bounds = np.array([xstart, xend, ystart, yend])
             bounds = np.clip(bounds, [xl, xl, yl, yl], [xu, xu, yu, yu]).astype(int)
 
-            self.worm_slices.append(bounds)
+            worm_slices.append(bounds)
+
+        ones = np.ones((int(yu - yl), int(xu - xl)))
+        inds = [np.array(np.nonzero(ones[y1:y2, x1:x2])) for x1, x2, y1, y2 in worm_slices]
+        inds = np.hstack(inds).T
+        self.worm_inds = np.unique(inds, axis=0).T
+        
 
     def control_points(self):
         """Get control points of the Bezier curve."""
@@ -83,9 +88,9 @@ class Camo_Worm:
         """
         return self.bezier.point_at_t(np.linspace(0, 1, intervals))
 
-    def approx_length(self):
+    def approx_length(self, intervals=3):
         """Approximate the length of the worm."""
-        intermediates = self.intermediate_points()
+        intermediates = self.intermediate_points(intervals)
         intermediates = np.array(intermediates)
         eds = np.linalg.norm(intermediates[1:] - intermediates[:-1], axis=1)
         return np.sum(eds)
@@ -107,9 +112,10 @@ class Camo_Worm:
         theta = rng.random() * np.pi
         dr = deviation_std * np.abs(rng.standard_normal())
         dgamma = rng.random() * np.pi
-        colour = rng.integers(0, 256)  # Random grayscale value
         width = width_theta * rng.standard_gamma(3)
-        return Camo_Worm(midx, midy, r, theta, dr, dgamma, width, colour)
+        bounds = Camo_Worm.generate_bounds([0, xlim, 0, ylim])
+        worm = Camo_Worm(bounds, np.array([midx, midy, r, theta, dr, dgamma, width]))
+        return worm
     
     @staticmethod
     def random_clew(size, imshape, init_params):
@@ -145,11 +151,20 @@ if __name__ == "__main__":
     mask = [320, 560, 160, 880] 	# ymin ymax xmin xmax
     
     image = util.prep_image(image_dir, image_name, mask)
-    
-    # worm = Camo_Worm.random_worm(image.shape[:2], (40, 30, 5))
-    # fig, ax = plt.subplots()
-    # ax.imshow(image, cmap='gray', origin='lower')
-    # ax.add_patch(worm.patch())
+    worm = Camo_Worm.random_worm(image.shape[:2], (100, 30, 10))
+
+    fig, ax = plt.subplots()
+    ax.imshow(image, cmap='gray', origin='lower')
+    ax.add_patch(worm.patch())
+
+    # for x1, x2, y1, y2 in worm.worm_slices:
+    #     rect = mpatches.Rectangle((x1, y1), x2 - x1, y2 - y1, edgecolor='red', facecolor='none')
+    #     ax.add_patch(rect)
+
+    # for x, y in worm.window_points:
+    #     ax.scatter(x, y)
+
+    plt.show()
     
 
 
