@@ -10,7 +10,7 @@ from cost_function.yi import *
 from Camo_Worm import Camo_Worm
 import util
 
-POPULATION_SIZE = 100
+POPULATION_SIZE = 24
 
 
 def final_cost(worm, var_map, image):
@@ -22,6 +22,56 @@ def final_cost(worm, var_map, image):
     return camo_cost + var_cost
 
 
+def generate_optimal_worms(image, max_depth=4, max_iter=100, population_size=24, F=0.1, CR=0.5):
+    worms = []
+    im_height, im_width = image.shape
+
+    gaussian_img = cv2.GaussianBlur(image, (5, 5), 0, borderType=cv2.BORDER_REPLICATE)
+    median_img = cv2.medianBlur(image, 11)
+    var_map = np.abs(cv2.Laplacian(gaussian_img, cv2.CV_64F, borderType=cv2.BORDER_REPLICATE))
+
+    def subdivision_worm(x, y, height, width, recursion_depth):
+        worm_bounds = (x, x + width, y, y + height)
+        bounds = Camo_Worm.generate_bounds(worm_bounds)
+        initial_population = [Camo_Worm(bounds) for _ in range(population_size)]
+
+        cost_fn = lambda wrm: final_cost(wrm, var_map, median_img)
+
+        de = DE(
+            objective_function=cost_fn,
+            bounds=bounds,
+            initial_population=initial_population,
+            max_iter=max_iter,        
+            F=F,
+            CR=CR
+        )
+
+        best_cost = np.inf
+        while de.generation < de.max_iter:
+            de.iterate()
+            best_worm = de.get_best()
+            best_cost = cost_fn(best_worm) / (height * width)
+            # print(f"Generation {de.generation}: Best cost = {best_cost}")
+
+        indent = "==" * (max_depth - recursion_depth)
+        print(f"{indent} Depth = {max_depth - recursion_depth} Best cost = {best_cost}")
+        if best_cost > -0.1:
+            if recursion_depth > 0 and width > 2 and height > 2:
+                new_height = height // 2
+                new_width = width // 2
+                subdivision_worm(x, y, new_height, new_width, recursion_depth - 1)
+                subdivision_worm(x + new_width, y, new_height, new_width, recursion_depth - 1)
+                subdivision_worm(x, y + new_height, new_height, new_width, recursion_depth - 1)
+                subdivision_worm(x + new_width, y + new_height, new_height, new_width, recursion_depth - 1)
+            else:
+                worms.append(best_worm)
+        else:
+            worms.append(best_worm)
+
+    subdivision_worm(0, 0, im_height, im_width, max_depth)
+    return worms
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         image_path = sys.argv[1]
@@ -29,39 +79,11 @@ if __name__ == '__main__':
         image_path = 'images/original.png'
     image = np.array(Image.open(image_path).convert('L'))
     image = np.flipud(image)
-    image = image[350:550, :]
 
-    height, width = image.shape
-    worm_bounds = (0, width, 0, 200)
-    bounds = Camo_Worm.generate_bounds(worm_bounds)
-    initial_population = [Camo_Worm(bounds) for _ in range(POPULATION_SIZE)]
-
-    gaussian_img = cv2.GaussianBlur(image, (5, 5), 0, borderType=cv2.BORDER_REPLICATE)
-    median_img = cv2.medianBlur(image, 11)
-    var_map = np.abs(cv2.Laplacian(gaussian_img, cv2.CV_64F, borderType=cv2.BORDER_REPLICATE))
-
-    cost_fn = lambda x: final_cost(x, var_map, median_img)
-
-    # Create an instance of the DE algorithm
-    de = DE(
-        objective_function=cost_fn,
-        bounds=bounds,
-        initial_population=initial_population,
-        max_iter=100,        
-        F=0.1,
-        CR=0.5
-    )
-
-    # Run the DE algorithm
-    while de.generation < de.max_iter:
-        de.iterate()
-        best_cost = cost_fn(de.get_best())
-        print(f"Generation {de.generation}: Best cost = {best_cost}")
-
-    # Get the best worm
-    best_worm = de.get_best()
+    # Generate the optimal worms
+    final_worms = generate_optimal_worms(image)
 
     # Visualize the best worm from the final population
     drawing = util.Drawing(image)
-    drawing.add_worms([best_worm])
+    drawing.add_worms(final_worms)
     drawing.show()
