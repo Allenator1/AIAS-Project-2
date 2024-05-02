@@ -27,40 +27,46 @@ class Camo_Worm:
         x, y, r, theta, dr, dgamma, self.width = self.vector
         self.colour = 255
 
-        (xl, xu), (yl, yu) = bounds[0:2]
+        (xmin, xmax), (ymin, ymax) = bounds[0:2]
 
         p0 = [x - r * np.cos(theta), y - r * np.sin(theta)]
         p2 = [x + r * np.cos(theta), y + r * np.sin(theta)]
         p1 = [x + dr * np.cos(theta + dgamma), y + dr * np.sin(theta + dgamma)]
 
         control_points = np.array([p0, p1, p2])
-        control_points = np.clip(control_points, [xl, yl], [xu, yu])
+        control_points = np.clip(control_points, [xmin, ymin], [xmax, ymax])
 
         self.bezier = mbezier.BezierSegment(control_points)
         
         window_size = 1.1 * self.width
         n_intervals = int(np.round(self.approx_length() / (window_size * 2)))
-        if n_intervals > 2:
-            window_points = self.bezier.point_at_t(np.linspace(0, 1, n_intervals))
-        else:
-            window_points = self.bezier.point_at_t([0, 0.5, 1.0])
+        self.worm_slices = []
 
-        worm_slices = []
-        for wx, wy in window_points:
-            xstart = wx - window_size
-            xend = wx + window_size
-            ystart = wy - window_size
-            yend = wy + window_size
+        if n_intervals > 1:
+            window_points = self.bezier.point_at_t(np.linspace(0, 1, n_intervals + 1))
+
+            for wx, wy in window_points:
+                xstart = wx - window_size
+                xend = wx + window_size
+                ystart = wy - window_size
+                yend = wy + window_size
+
+                bounds = np.array([xstart, xend, ystart, yend])
+                bounds = np.clip(bounds, [xmin, xmin, ymin, ymin], [xmax, xmax, ymax, ymax]).astype(int)
+
+                self.worm_slices.append(bounds)
+
+        else:
+            p1, p2 = self.bezier.point_at_t([0.0, 1.0])
+            xstart = min(p1[0], p2[0]) - window_size
+            xend = max(p1[0], p2[0]) + window_size
+            ystart = min([p1[1], p2[1]]) - window_size
+            yend = max(p1[1], p2[1]) + window_size
 
             bounds = np.array([xstart, xend, ystart, yend])
-            bounds = np.clip(bounds, [xl, xl, yl, yl], [xu, xu, yu, yu]).astype(int)
+            bounds = np.clip(bounds, [xmin, xmin, ymin, ymin], [xmax, xmax, ymax, ymax]).astype(int)
 
-            worm_slices.append(bounds)
-
-        ones = np.ones((int(yu - yl), int(xu - xl)))
-        inds = [np.array(np.nonzero(ones[y1:y2, x1:x2])) for x1, x2, y1, y2 in worm_slices]
-        inds = np.hstack(inds).T
-        self.worm_inds = np.unique(inds, axis=0).T
+            self.worm_slices.append(bounds)
         
 
     def control_points(self):
@@ -157,12 +163,9 @@ if __name__ == "__main__":
     ax.imshow(image, cmap='gray', origin='lower')
     ax.add_patch(worm.patch())
 
-    # for x1, x2, y1, y2 in worm.worm_slices:
-    #     rect = mpatches.Rectangle((x1, y1), x2 - x1, y2 - y1, edgecolor='red', facecolor='none')
-    #     ax.add_patch(rect)
-
-    # for x, y in worm.window_points:
-    #     ax.scatter(x, y)
+    for x1, x2, y1, y2 in worm.worm_slices:
+        rect = mpatches.Rectangle((x1, y1), x2 - x1, y2 - y1, edgecolor='red', facecolor='none')
+        ax.add_patch(rect)
 
     plt.show()
     
