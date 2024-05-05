@@ -5,8 +5,7 @@ def maximise_grad(worm, variance_map):
     """
     Maximise the global variance that the worms cover.
     """
-    vars = [variance_map[y1:y2, x1:x2] for x1, x2, y1, y2 in worm.worm_slices]
-    vars = np.hstack([a.flatten() for a in vars])
+    vars = variance_map[worm.indices]
     return -np.sum(vars)
 
 
@@ -14,8 +13,7 @@ def minimise_local_variance(worm, img_map):
     """
     Minimise the variance of the image area that the worms cover
     """
-    img_vals = [img_map[y1:y2, x1:x2] for x1, x2, y1, y2 in worm.worm_slices]
-    img_vals = np.hstack([a.flatten() for a in img_vals])
+    img_vals = img_map[worm.indices]
     camo_cost = np.std(img_vals) * len(img_vals)
     return camo_cost
 
