@@ -1,4 +1,6 @@
 import numpy as np
+import time
+import cv2
 
 import matplotlib.path as mpath
 import matplotlib.patches as mpatches
@@ -24,8 +26,9 @@ class Camo_Worm:
             self.vector = vector
         else:
             self.vector = np.random.uniform(bounds[:, 0], bounds[:, 1])
-        x, y, r, theta, dr, dgamma, self.width = self.vector
+        x, y, r, theta, dr, dgamma = self.vector
         self.colour = 255
+        self.width = 2
 
         (xmin, xmax), (ymin, ymax) = bounds[0:2]
 
@@ -37,36 +40,11 @@ class Camo_Worm:
         control_points = np.clip(control_points, [xmin, ymin], [xmax, ymax])
 
         self.bezier = mbezier.BezierSegment(control_points)
-        
-        window_size = 1.1 * self.width
-        n_intervals = int(np.round(self.approx_length() / (window_size * 2)))
-        self.worm_slices = []
-
-        if n_intervals > 1:
-            window_points = self.bezier.point_at_t(np.linspace(0, 1, n_intervals + 1))
-
-            for wx, wy in window_points:
-                xstart = wx - window_size
-                xend = wx + window_size
-                ystart = wy - window_size
-                yend = wy + window_size
-
-                bounds = np.array([xstart, xend, ystart, yend])
-                bounds = np.clip(bounds, [xmin, xmin, ymin, ymin], [xmax, xmax, ymax, ymax]).astype(int)
-
-                self.worm_slices.append(bounds)
-
-        else:
-            p1, p2 = self.bezier.point_at_t([0.0, 1.0])
-            xstart = min(p1[0], p2[0]) - window_size
-            xend = max(p1[0], p2[0]) + window_size
-            ystart = min([p1[1], p2[1]]) - window_size
-            yend = max(p1[1], p2[1]) + window_size
-
-            bounds = np.array([xstart, xend, ystart, yend])
-            bounds = np.clip(bounds, [xmin, xmin, ymin, ymin], [xmax, xmax, ymax, ymax]).astype(int)
-
-            self.worm_slices.append(bounds)
+        num_points = int(self.approx_length())
+        points = self.intermediate_points(num_points)
+        points = np.int64(np.round(points))
+        [x_points, y_points] = np.unique(points, axis=0).T
+        self.indices = tuple([y_points, x_points])
         
 
     def control_points(self):
@@ -118,9 +96,8 @@ class Camo_Worm:
         theta = rng.random() * np.pi
         dr = deviation_std * np.abs(rng.standard_normal())
         dgamma = rng.random() * np.pi
-        width = width_theta * rng.standard_gamma(3)
         bounds = Camo_Worm.generate_bounds([0, xlim, 0, ylim])
-        worm = Camo_Worm(bounds, np.array([midx, midy, r, theta, dr, dgamma, width]))
+        worm = Camo_Worm(bounds, np.array([midx, midy, r, theta, dr, dgamma]))
         return worm
     
     @staticmethod
@@ -137,16 +114,14 @@ class Camo_Worm:
         dim_length = max(x2 - x1, y2 - y1)
         r_min = dim_length / 10
         r_max = dim_length 
-        w_max = dim_length / 2
 
         return np.array([
-            [x1, x2],             # x
-            [y1, y2],             # y
+            [x1, x2 - 1],         # x
+            [y1, y2 - 1],         # y
             [r_min, r_max],       # r
             [0, np.pi],           # theta
             [10, r_min],          # dr
             [0, np.pi],           # dgamma
-            [2, 4],           # width
         ])
 
 
@@ -156,18 +131,13 @@ if __name__ == "__main__":
     image_name='original'
     mask = [320, 560, 160, 880] 	# ymin ymax xmin xmax
     
-    image = util.prep_image(image_dir, image_name, mask)
+    image = cv2.imread(f"{image_dir}/{image_name}.png", cv2.IMREAD_GRAYSCALE)
+    image = image[mask[0]:mask[1], mask[2]:mask[3]]
+
+    t1 = time.time()
     worm = Camo_Worm.random_worm(image.shape[:2], (100, 30, 10))
-
-    fig, ax = plt.subplots()
-    ax.imshow(image, cmap='gray', origin='lower')
-    ax.add_patch(worm.patch())
-
-    for x1, x2, y1, y2 in worm.worm_slices:
-        rect = mpatches.Rectangle((x1, y1), x2 - x1, y2 - y1, edgecolor='red', facecolor='none')
-        ax.add_patch(rect)
-
-    plt.show()
+    t2 = time.time()
+    print(f"Time taken: {t2 - t1} s")
     
 
 
