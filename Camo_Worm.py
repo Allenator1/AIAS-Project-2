@@ -134,10 +134,10 @@ class Camo_Worm:
     @staticmethod
     def generate_bounds(worm_bounds):
         x1, x2, y1, y2 = worm_bounds
-        min_dim = min(x2 - x1, y2 - y1)
-        r_min = min_dim / 20
-        r_max = min_dim / 4
-        w_max = min_dim / 2
+        dim_length = max(x2 - x1, y2 - y1)
+        r_min = dim_length / 10
+        r_max = dim_length 
+        w_max = dim_length / 2
 
         return np.array([
             [x1, x2],             # x
@@ -146,7 +146,7 @@ class Camo_Worm:
             [0, np.pi],           # theta
             [10, r_min],          # dr
             [0, np.pi],           # dgamma
-            [2, w_max],           # width
+            [2, 4],           # width
         ])
 
 
