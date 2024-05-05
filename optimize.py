@@ -1,13 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-from PIL import Image
 import cv2
 
 from differential_evolution.DE import DE
 from cost import *
 from cost_function.yi import *
 from Camo_Worm import Camo_Worm
+from anchor import generate_boxes
+from tqdm import tqdm
 import util
 
 POPULATION_SIZE = 24
@@ -22,7 +23,7 @@ def final_cost(worm, var_map, image):
     return 50 * grad_cost + camo_cost
 
 
-def generate_optimal_worms(image, max_depth=4, max_iter=100, population_size=24, F=0.9, CR=0.9):
+def recursive_subdivision_optimisation(image, max_depth=4, max_iter=100, population_size=24, F=0.9, CR=0.9):
     worms = []
     im_height, im_width = image.shape
 
@@ -73,16 +74,51 @@ def generate_optimal_worms(image, max_depth=4, max_iter=100, population_size=24,
     return worms
 
 
+def multiscale_optimisation(image):
+    worms = []
+
+    median_img = cv2.medianBlur(image, 11)
+    grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=5))
+    # Rescale the gradient magnitude to lie between 0 and 1
+    grad_y = (grad_y - np.min(grad_y)) / (np.max(grad_y) - np.min(grad_y))
+    grad_y = (grad_y > 0.1).astype(np.float32)
+
+    for y1, x1, y2, x2 in tqdm(generate_boxes(image.shape)):
+        bounds = Camo_Worm.generate_bounds((x1, x2, y1, y2))
+        initial_population = [Camo_Worm(bounds) for _ in range(POPULATION_SIZE)]
+
+        cost_fn = lambda wrm: final_cost(wrm, grad_y, median_img)
+
+        de = DE(
+            objective_function=cost_fn,
+            bounds=bounds,
+            initial_population=initial_population,
+            max_iter=100,        
+            F=0.9,
+            CR=0.9
+        )
+
+        while de.generation < de.max_iter:
+            de.iterate()
+            best_worm = de.get_best()
+
+        worms.append(best_worm)
+        
+    return worms
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         image_path = sys.argv[1]
     else:
         image_path = 'images/original.png'
-    image = np.array(Image.open(image_path).convert('L'))
-    image = np.flipud(image)[320:560, 160:880]
+    mask = [320, 560, 160, 880]  # ymin ymax xmin xmax
+
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    image = np.flipud(image)[mask[0]:mask[1], mask[2]:mask[3]]
 
     # Generate the optimal worms
-    final_worms = generate_optimal_worms(image)
+    final_worms = multiscale_optimisation(image)
 
     # Visualize the best worm from the final population
     drawing = util.Drawing(image)
