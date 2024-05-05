@@ -19,20 +19,18 @@ def final_cost(worm, var_map, image):
     """
     camo_cost = minimise_local_variance(worm, image)
     grad_cost = maximise_grad(worm, var_map)
-    return camo_cost + grad_cost
+    return 50 * grad_cost + camo_cost
 
 
-def generate_optimal_worms(image, max_depth=4, max_iter=100, population_size=24, F=0.1, CR=0.5):
+def generate_optimal_worms(image, max_depth=4, max_iter=100, population_size=24, F=0.9, CR=0.9):
     worms = []
     im_height, im_width = image.shape
 
-    median_img = cv2.medianBlur(image, 9)
+    median_img = cv2.medianBlur(image, 11)
     grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=5))
     # Rescale the gradient magnitude to lie between 0 and 1
     grad_y = (grad_y - np.min(grad_y)) / (np.max(grad_y) - np.min(grad_y))
     grad_y = (grad_y > 0.1).astype(np.float32)
-
-    plt.imshow(grad_y, cmap='gray')
 
     def subdivision_worm(x, y, height, width, recursion_depth):
         worm_bounds = (x, x + width, y, y + height)
@@ -54,23 +52,22 @@ def generate_optimal_worms(image, max_depth=4, max_iter=100, population_size=24,
         while de.generation < de.max_iter:
             de.iterate()
             best_worm = de.get_best()
-            best_cost = cost_fn(best_worm)
+            best_cost = cost_fn(best_worm) / (im_height * im_width)
             # print(f"Generation {de.generation}: Best cost = {best_cost}")
 
         indent = "==" * (max_depth - recursion_depth)
         print(f"{indent} Depth = {max_depth - recursion_depth} Best cost = {best_cost}")
-        if best_cost > 0.0:
-            if recursion_depth > 0 and width > 2 and height > 2:
-                new_height = height // 2
-                new_width = width // 2
-                subdivision_worm(x, y, new_height, new_width, recursion_depth - 1)
-                subdivision_worm(x + new_width, y, new_height, new_width, recursion_depth - 1)
-                subdivision_worm(x, y + new_height, new_height, new_width, recursion_depth - 1)
-                subdivision_worm(x + new_width, y + new_height, new_height, new_width, recursion_depth - 1)
-            else:
-                worms.append(best_worm)
-        else:
-            worms.append(best_worm)
+
+        new_height = height // 2
+        new_width = width // 2
+
+        if recursion_depth > 0 and width > 2 and height > 2:
+            subdivision_worm(x, y, new_height, new_width, recursion_depth - 1)
+            subdivision_worm(x + new_width, y, new_height, new_width, recursion_depth - 1)
+            subdivision_worm(x, y + new_height, new_height, new_width, recursion_depth - 1)
+            subdivision_worm(x + new_width, y + new_height, new_height, new_width, recursion_depth - 1)
+            
+        worms.append(best_worm)
 
     subdivision_worm(0, 0, im_height, im_width, max_depth)
     return worms
@@ -82,7 +79,7 @@ if __name__ == '__main__':
     else:
         image_path = 'images/original.png'
     image = np.array(Image.open(image_path).convert('L'))
-    image = np.flipud(image)
+    image = np.flipud(image)[320:560, 160:880]
 
     # Generate the optimal worms
     final_worms = generate_optimal_worms(image)
