@@ -12,18 +12,48 @@ from tqdm import tqdm
 import util
 
 POPULATION_SIZE = 24
+MAX_ITER = 100
+F = 0.5
+CR = 0.9
 
 
-def final_cost(worm, var_map, image):
+def final_cost(worm, var_map, image, worm_mask=None):
     """
     Final cost function that combines the cost functions from Robbie and Allen.
     """
     camo_cost = minimise_local_variance(worm, image)
     grad_cost = maximise_grad(worm, var_map)
-    return 50 * grad_cost + camo_cost
+    overlap_cost = 0
+    if worm_mask is not None:
+        overlap_cost = minimise_overlap(worm, worm_mask)
+    return 40 * grad_cost + camo_cost + overlap_cost - worm.length
 
 
-def recursive_subdivision_optimisation(image, max_depth=4, max_iter=100, population_size=24, F=0.9, CR=0.9):
+def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
+    worm_bounds = (x1, x1 + width, y1, y1 + height)
+    bounds = Camo_Worm.generate_bounds(worm_bounds)
+    initial_population = [Camo_Worm(bounds) for _ in range(POPULATION_SIZE)]
+
+    cost_fn = lambda wrm: final_cost(wrm, grad_y, median_img, worm_mask)
+
+    de = DE(
+        objective_function=cost_fn,
+        bounds=bounds,
+        initial_population=initial_population,
+        max_iter=MAX_ITER,        
+        F=F,
+        CR=CR
+    )
+
+    while de.generation < de.max_iter:
+        de.iterate()
+        best_worm = de.get_best()
+        best_cost = cost_fn(best_worm) / (width * height)
+
+    return (best_worm, best_cost)
+
+
+def recursive_subdivision_optimisation(image, max_depth=4):
     worms = []
     im_height, im_width = image.shape
 
@@ -34,28 +64,7 @@ def recursive_subdivision_optimisation(image, max_depth=4, max_iter=100, populat
     grad_y = (grad_y > 0.1).astype(np.float32)
 
     def subdivision_worm(x, y, height, width, recursion_depth):
-        worm_bounds = (x, x + width, y, y + height)
-        bounds = Camo_Worm.generate_bounds(worm_bounds)
-        initial_population = [Camo_Worm(bounds) for _ in range(population_size)]
-
-        cost_fn = lambda wrm: final_cost(wrm, grad_y, median_img)
-
-        de = DE(
-            objective_function=cost_fn,
-            bounds=bounds,
-            initial_population=initial_population,
-            max_iter=max_iter,        
-            F=F,
-            CR=CR
-        )
-
-        best_cost = np.inf
-        while de.generation < de.max_iter:
-            de.iterate()
-            best_worm = de.get_best()
-            best_cost = cost_fn(best_worm) / (im_height * im_width)
-            # print(f"Generation {de.generation}: Best cost = {best_cost}")
-
+        best_worm, best_cost = optimise_worm(x, y, width, height, grad_y, median_img)
         indent = "==" * (max_depth - recursion_depth)
         print(f"{indent} Depth = {max_depth - recursion_depth} Best cost = {best_cost}")
 
@@ -84,26 +93,31 @@ def multiscale_optimisation(image):
     grad_y = (grad_y > 0.1).astype(np.float32)
 
     for y1, x1, y2, x2 in tqdm(generate_boxes(image.shape)):
-        bounds = Camo_Worm.generate_bounds((x1, x2, y1, y2))
-        initial_population = [Camo_Worm(bounds) for _ in range(POPULATION_SIZE)]
-
-        cost_fn = lambda wrm: final_cost(wrm, grad_y, median_img)
-
-        de = DE(
-            objective_function=cost_fn,
-            bounds=bounds,
-            initial_population=initial_population,
-            max_iter=100,        
-            F=0.9,
-            CR=0.9
-        )
-
-        while de.generation < de.max_iter:
-            de.iterate()
-            best_worm = de.get_best()
-
+        best_worm, _ = optimise_worm(x1, y1, x2 - x1, y2 - y1, grad_y, median_img)
         worms.append(best_worm)
         
+    return worms
+
+
+def iterative_optimisation(image, num_iter=100):
+    worms = []
+    worm_mask = np.zeros(image.shape, dtype=np.uint8)
+
+    median_img = cv2.medianBlur(image, 3)
+    grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=3))
+    # Rescale the gradient magnitude to lie between 0 and 1
+    grad_y = (grad_y - np.min(grad_y)) / (np.max(grad_y) - np.min(grad_y))
+    grad_y = (grad_y > 0.10).astype(np.float32)
+
+    for _ in tqdm(range(num_iter)):
+        best_worm, _ = optimise_worm(0, 0, image.shape[1], image.shape[0], grad_y, median_img, worm_mask)
+
+        worms.append(best_worm)
+        new_mask = np.zeros(image.shape, dtype=np.uint8)
+        new_mask[best_worm.indices] = 1
+        new_mask = cv2.dilate(new_mask, np.ones((best_worm.width + 4, best_worm.width + 4), np.uint8), iterations=1)
+        worm_mask = np.logical_or(worm_mask, new_mask).astype(np.uint8)
+
     return worms
 
 
@@ -115,10 +129,11 @@ if __name__ == '__main__':
     mask = [320, 560, 160, 880]  # ymin ymax xmin xmax
 
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    image = np.flipud(image)[mask[0]:mask[1], mask[2]:mask[3]]
+    height, width = image.shape
+    image = np.flipud(image)[50:height - 50, 50:width - 50]
 
     # Generate the optimal worms
-    final_worms = multiscale_optimisation(image)
+    final_worms = iterative_optimisation(image)
 
     # Visualize the best worm from the final population
     drawing = util.Drawing(image)

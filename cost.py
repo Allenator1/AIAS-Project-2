@@ -18,6 +18,14 @@ def minimise_local_variance(worm, img_map):
     return camo_cost
 
 
+def minimise_overlap(worm, mask):
+    """
+    Minimise the overlap between worms.
+    """
+    overlap_cost = np.sum(mask[worm.indices])
+    return overlap_cost ** 2
+
+
 def straighten_worm(worm):
     """
     Calculate the cost of a clew of worms based on the deviation from a straight line.

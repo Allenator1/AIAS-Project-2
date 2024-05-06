@@ -40,7 +40,9 @@ class Camo_Worm:
         control_points = np.clip(control_points, [xmin, ymin], [xmax, ymax])
 
         self.bezier = mbezier.BezierSegment(control_points)
-        num_points = int(self.approx_length())
+        self.length = self.approx_length()
+
+        num_points = int(self.length)
         points = self.intermediate_points(num_points)
         points = np.int64(np.round(points))
         [x_points, y_points] = np.unique(points, axis=0).T
