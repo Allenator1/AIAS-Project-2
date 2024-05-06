@@ -26,7 +26,7 @@ def final_cost(worm, var_map, image, worm_mask=None):
     overlap_cost = 0
     if worm_mask is not None:
         overlap_cost = minimise_overlap(worm, worm_mask)
-    return 40 * grad_cost + camo_cost + overlap_cost - 0.5 * worm.length
+    return 40 * grad_cost + camo_cost + overlap_cost
 
 
 def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
@@ -53,7 +53,7 @@ def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
     return (best_worm, best_cost)
 
 
-def recursive_subdivision_optimisation(image, max_depth=50):
+def recursive_subdivision_optimisation(image, max_depth=4):
     worms = []
     im_height, im_width = image.shape
 

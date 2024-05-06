@@ -89,7 +89,7 @@ class Camo_Worm:
     
     def camoflage(self, image):
         """Camoflage the worm."""
-        self.colour = np.quantile(image[self.indices], q = 0.7, axis=None)
+        self.colour = np.quantile(image[self.indices], q = 0.5, axis=None)
 
     @staticmethod
     def random_worm(imshape, init_params):
