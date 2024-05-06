@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 NUM_ANCHORS_X = 4
-NUM_ANCHORS_Y = 8
-ASPECT_RATIOS = [1.0, 2.0, 1.5]     # w/h
+NUM_ANCHORS_Y = 12
+ASPECT_RATIOS = [2.0, 1.5]     # w/h
 ANCHOR_SCALE = 1.5
-NUM_SCALES = 3
+NUM_SCALES = 1
 
 
 def generate_boxes(imshape):

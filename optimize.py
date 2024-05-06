@@ -57,7 +57,7 @@ def recursive_subdivision_optimisation(image, max_depth=4):
     worms = []
     im_height, im_width = image.shape
 
-    median_img = cv2.medianBlur(image, 11)
+    median_img = cv2.medianBlur(image, 5)
     grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=5))
     # Rescale the gradient magnitude to lie between 0 and 1
     grad_y = (grad_y - np.min(grad_y)) / (np.max(grad_y) - np.min(grad_y))
@@ -86,7 +86,7 @@ def recursive_subdivision_optimisation(image, max_depth=4):
 def multiscale_optimisation(image):
     worms = []
 
-    median_img = cv2.medianBlur(image, 11)
+    median_img = cv2.medianBlur(image, 5)
     grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=5))
     # Rescale the gradient magnitude to lie between 0 and 1
     grad_y = (grad_y - np.min(grad_y)) / (np.max(grad_y) - np.min(grad_y))
@@ -130,10 +130,10 @@ if __name__ == '__main__':
 
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     height, width = image.shape
-    image = np.flipud(image)[50:height - 50, 50:width - 50]
+    image = np.flipud(image)
 
     # Generate the optimal worms
-    final_worms = iterative_optimisation(image)
+    final_worms = multiscale_optimisation(image)
 
     # Visualize the best worm from the final population
     drawing = util.Drawing(image)
