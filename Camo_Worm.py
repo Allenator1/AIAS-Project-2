@@ -19,7 +19,7 @@ class Camo_Worm:
     """
     Class representing a camouflage worm.
     """
-    def __init__(self, x, y, r, theta, deviation_r, deviation_gamma, width, colour, imshape):
+    def __init__(self, x, y, r, theta, deviation_r, deviation_gamma, width, colour):
         self.x = x
         self.y = y
         self.r = r
@@ -34,22 +34,13 @@ class Camo_Worm:
         p1 = [self.x + self.dr * np.cos(self.theta + self.dgamma), self.y + self.dr * np.sin(self.theta + self.dgamma)]
         self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
         
-        n_intervals = int(self.approx_length() // self.width)
-        self.n_intervals = n_intervals
-        self.worm_slices = []
-
+        worm_length = self.approx_length()
+        n_intervals = int(worm_length // self.width)
         if n_intervals > 0:
             start = 1 / (2 * n_intervals); end = 1 - 1 / (2 * n_intervals)
-            window_points = self.bezier.point_at_t(np.linspace(start, end, n_intervals))
-
-            for x, y in window_points:
-                xstart = int(x - self.width // 2)
-                xend = int(x + self.width // 2)
-                ystart = int(y - self.width // 2)
-                yend = int(y + self.width // 2)
-                
-                if xstart > 0 and xend < imshape[1] and ystart > 0 and yend < imshape[0]:
-                    self.worm_slices.append((slice(ystart, yend), slice(xstart, xend)))
+            self.window_points = self.bezier.point_at_t(np.linspace(start, end, n_intervals))
+        else:
+            self.window_points = [self.bezier.point_at_t(0.5)]
 
     def control_points(self):
         """Get control points of the Bezier curve."""
@@ -75,7 +66,7 @@ class Camo_Worm:
             numpy.ndarray: Array of intermediate points.
         """
         if intervals is None:
-            intervals = max(3, int(np.ceil(self.r / 8)))
+            intervals = max(100, int(np.ceil(self.r / 8)))
         return self.bezier.point_at_t(np.linspace(0, 1, intervals))
 
     def approx_length(self):
@@ -95,15 +86,16 @@ class Camo_Worm:
         """Get worm parameters."""
         return np.array([self.x, self.y, self.r, self.theta, self.dr, self.dgamma, self.width, self.colour])
     
-    def get_worm_inds(self, image):
-        worm_slices = []
+    def get_worm_vals(self, image):
+        worm_vals = []
         for x, y in self.window_points:
             xstart = max(0, x - self.width // 2)
             xend = min(x + self.width // 2, image.shape[1])
             ystart = max(0, y - self.width // 2)
             yend = min(y + self.width // 2, image.shape[0])
-            worm_slices.append((slice(ystart, yend), slice(xstart, xend)))
-        return worm_slices
+            vals = np.reshape(image[int(ystart):int(yend), int(xstart):int(xend)], -1)
+            worm_vals.append(vals)
+        return np.concatenate(worm_vals)
 
     @staticmethod
     def random_worm(imshape, init_params):
@@ -137,8 +129,7 @@ class Clew():
         else:
             self.vector = np.random.uniform(bounds[:, 0], bounds[:, 1])
         
-        height = bounds[1, 1]; width = bounds[0, 1]
-        self.worms = [Camo_Worm(*self.vector[i:i+8], imshape=(height, width)) for i in range(0, len(self.vector), 8)]
+        self.worms = [Camo_Worm(*self.vector[i:i+8]) for i in range(0, len(self.vector), 8)]
     
     def __getitem__(self, key):
         return self.worms[key]
@@ -152,16 +143,29 @@ class Clew():
     @staticmethod
     def generate_bounds(num_worms, imshape):
         bounds = np.array([
-            [0, imshape[1]],      # x
-            [0, imshape[0]],      # y
-            [10, 100],            # r
-            [0, np.pi],           # theta
-            [10, 50],             # dr
-            [0, np.pi],           # dgamma
-            [2, 20],              # width
+            [200, 400],      # x
+            [300, 530],      # y
+            [10, 600],            # r
+            [-0.3, 0.3],           # theta
+            [1, 20],             # dr
+            [-np.pi, np.pi],           # dgamma
+            [2, 4],              # width
             [0, 255]              # colour
         ])
+
         return np.tile(bounds, (num_worms, 1))
+    def generate_inibounds(num_worms, imshape):              # bounds for initial population
+        inibounds = np.array([
+           [200.2, 400],      # x
+            [400, 530],      # y
+            [10, 100],            # r
+            [-0.3, 0.3],           # theta
+            [1, 20],             # dr
+            [-np.pi, np.pi],           # dgamma
+            [2, 4],              # width
+            [0, 255]              # colour
+        ])
+        return np.tile(inibounds, (num_worms, 1))
 
 
 ## TEST USAGE
@@ -180,5 +184,4 @@ if __name__ == "__main__":
     worm_vals = worm.get_worm_vals(image)
     print(worm_vals)
     
-
 
