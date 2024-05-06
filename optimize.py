@@ -14,7 +14,7 @@ import util
 POPULATION_SIZE = 24
 MAX_ITER = 100
 F = 0.5
-CR = 0.9
+CR = 0.5
 
 
 def final_cost(worm, var_map, image, worm_mask=None):
@@ -26,7 +26,7 @@ def final_cost(worm, var_map, image, worm_mask=None):
     overlap_cost = 0
     if worm_mask is not None:
         overlap_cost = minimise_overlap(worm, worm_mask)
-    return 40 * grad_cost + camo_cost + overlap_cost - worm.length
+    return 40 * grad_cost + camo_cost + overlap_cost - 0.5 * worm.length
 
 
 def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
@@ -53,7 +53,7 @@ def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
     return (best_worm, best_cost)
 
 
-def recursive_subdivision_optimisation(image, max_depth=4):
+def recursive_subdivision_optimisation(image, max_depth=50):
     worms = []
     im_height, im_width = image.shape
 
@@ -76,7 +76,8 @@ def recursive_subdivision_optimisation(image, max_depth=4):
             subdivision_worm(x + new_width, y, new_height, new_width, recursion_depth - 1)
             subdivision_worm(x, y + new_height, new_height, new_width, recursion_depth - 1)
             subdivision_worm(x + new_width, y + new_height, new_height, new_width, recursion_depth - 1)
-            
+        
+        best_worm.camoflage(median_img)
         worms.append(best_worm)
 
     subdivision_worm(0, 0, im_height, im_width, max_depth)
@@ -94,12 +95,13 @@ def multiscale_optimisation(image):
 
     for y1, x1, y2, x2 in tqdm(generate_boxes(image.shape)):
         best_worm, _ = optimise_worm(x1, y1, x2 - x1, y2 - y1, grad_y, median_img)
+        best_worm.camoflage(median_img)
         worms.append(best_worm)
         
     return worms
 
 
-def iterative_optimisation(image, num_iter=100):
+def iterative_optimisation(image, num_iter=20):
     worms = []
     worm_mask = np.zeros(image.shape, dtype=np.uint8)
 
@@ -112,10 +114,12 @@ def iterative_optimisation(image, num_iter=100):
     for _ in tqdm(range(num_iter)):
         best_worm, _ = optimise_worm(0, 0, image.shape[1], image.shape[0], grad_y, median_img, worm_mask)
 
+        best_worm.camoflage(median_img)
         worms.append(best_worm)
+
         new_mask = np.zeros(image.shape, dtype=np.uint8)
         new_mask[best_worm.indices] = 1
-        new_mask = cv2.dilate(new_mask, np.ones((best_worm.width + 4, best_worm.width + 4), np.uint8), iterations=1)
+        new_mask = cv2.dilate(new_mask, np.ones((best_worm.width + 1, best_worm.width + 1), np.uint8), iterations=1)
         worm_mask = np.logical_or(worm_mask, new_mask).astype(np.uint8)
 
     return worms
@@ -133,7 +137,7 @@ if __name__ == '__main__':
     image = np.flipud(image)
 
     # Generate the optimal worms
-    final_worms = multiscale_optimisation(image)
+    final_worms = iterative_optimisation(image)
 
     # Visualize the best worm from the final population
     drawing = util.Drawing(image)

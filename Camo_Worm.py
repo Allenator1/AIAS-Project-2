@@ -40,7 +40,7 @@ class Camo_Worm:
         control_points = np.clip(control_points, [xmin, ymin], [xmax, ymax])
 
         self.bezier = mbezier.BezierSegment(control_points)
-        self.length = self.approx_length()
+        self.length = self.approx_length(intervals = 10)
 
         num_points = int(self.length)
         points = self.intermediate_points(num_points)
@@ -86,6 +86,10 @@ class Camo_Worm:
         intermediates = np.int64(np.round(np.array(self.bezier.point_at_t(t)).reshape(-1, 2)))
         colours = [image[point[0], point[1]] for point in intermediates]
         return np.mean(colours) / 255  # Calculate grayscale value
+    
+    def camoflage(self, image):
+        """Camoflage the worm."""
+        self.colour = np.quantile(image[self.indices], q = 0.7, axis=None)
 
     @staticmethod
     def random_worm(imshape, init_params):
