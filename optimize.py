@@ -26,7 +26,7 @@ def final_cost(worm, var_map, image, worm_mask=None):
     overlap_cost = 0
     if worm_mask is not None:
         overlap_cost = minimise_overlap(worm, worm_mask)
-    return 40 * grad_cost + camo_cost + overlap_cost
+    return 50 * grad_cost + camo_cost + overlap_cost
 
 
 def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
