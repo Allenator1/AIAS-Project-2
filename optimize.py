@@ -72,7 +72,7 @@ def recursive_subdivision_optimisation(image, max_depth=4, debug=True):
         new_height = height // 2
         new_width = width // 2
 
-        if recursion_depth > 0 and new_width >= 8 and new_height >= 8:
+        if recursion_depth > 0 and new_width >= 8 and new_height >= 8 and best_cost < 0.0:
             subdivision_worm(x, y, new_height, new_width, recursion_depth - 1)
             subdivision_worm(x + new_width, y, new_height, new_width, recursion_depth - 1)
             subdivision_worm(x, y + new_height, new_height, new_width, recursion_depth - 1)

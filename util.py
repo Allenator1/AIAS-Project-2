@@ -35,7 +35,8 @@ class Drawing:
     def show(self, save=None):
         if save is not None:
             plt.savefig(save)
-        plt.show()
+        else:
+            plt.show()
         
 
 def crop (image, mask):
