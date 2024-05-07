@@ -3,9 +3,7 @@ import matplotlib.pyplot as plt
 import sys
 import cv2
 
-from differential_evolution.DE import DE
-from cost import *
-from cost_function.yi import *
+from DE import DE
 from Camo_Worm import Camo_Worm
 from anchor import generate_boxes
 from tqdm import tqdm
@@ -15,6 +13,32 @@ POPULATION_SIZE = 24
 MAX_ITER = 100
 F = 0.5
 CR = 0.5
+
+# Cost functions 
+
+def maximise_grad(worm, variance_map):
+    """
+    Maximise the global variance that the worms cover.
+    """
+    vars = variance_map[worm.indices]
+    return -np.sum(vars)
+
+
+def minimise_local_variance(worm, img_map):
+    """
+    Minimise the variance of the image area that the worms cover
+    """
+    img_vals = img_map[worm.indices]
+    camo_cost = np.std(img_vals) * len(img_vals)
+    return camo_cost
+
+
+def minimise_overlap(worm, mask):
+    """
+    Minimise the overlap between worms.
+    """
+    overlap_cost = np.sum(mask[worm.indices])
+    return overlap_cost ** 2
 
 
 def final_cost(worm, var_map, image, worm_mask=None):
@@ -30,6 +54,9 @@ def final_cost(worm, var_map, image, worm_mask=None):
 
 
 def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
+    """
+    Optimise a worm within the given bounds.
+    """
     worm_bounds = (x1, x1 + width, y1, y1 + height)
     bounds = Camo_Worm.generate_bounds(worm_bounds)
     initial_population = [Camo_Worm(bounds) for _ in range(POPULATION_SIZE)]
@@ -54,6 +81,9 @@ def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
 
 
 def recursive_subdivision_optimisation(image, max_depth=4, debug=True):
+    """
+    Recursively subdivide the image and optimise the worm within each subdivision.
+    """
     worms = []
     im_height, im_width = image.shape
 
@@ -86,6 +116,9 @@ def recursive_subdivision_optimisation(image, max_depth=4, debug=True):
 
 
 def multiscale_optimisation(image):
+    """
+    Optimise worms within bounding boxes at different aspect ratios and scales.
+    """
     worms = []
 
     median_img = cv2.medianBlur(image, 5)
@@ -103,6 +136,9 @@ def multiscale_optimisation(image):
 
 
 def iterative_optimisation(image, num_iter=50):
+    """
+    Iteratively add the most optimal worm to the image.
+    """
     worms = []
     worm_mask = np.zeros(image.shape, dtype=np.uint8)
 
@@ -127,6 +163,8 @@ def iterative_optimisation(image, num_iter=50):
 
 
 if __name__ == '__main__':
+    # Test the optimisation functions on a single image
+
     if len(sys.argv) > 1:
         image_path = sys.argv[1]
     else:

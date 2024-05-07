@@ -59,7 +59,7 @@ class DE:
 		return self.population[np.argmin([self.objective_function(x) for x in self.population])]
 	
 
-# Test usage
+# Test usage on the Griewangk function
 if __name__ == '__main__':
 	def griewangk_function(x):
 		vec = x.vector

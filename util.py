@@ -3,7 +3,6 @@ import imageio.v3 as iio
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from sklearn.metrics.pairwise import euclidean_distances
 
 
 class Drawing:

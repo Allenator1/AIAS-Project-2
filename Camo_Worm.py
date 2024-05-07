@@ -6,11 +6,10 @@ import matplotlib.path as mpath
 import matplotlib.patches as mpatches
 import matplotlib.bezier as mbezier
 import matplotlib.pyplot as plt
-from sklearn.metrics.pairwise import euclidean_distances
 
 import util
 
-from differential_evolution.DE import Target
+from DE import Target
 
 
 Path = mpath.Path
