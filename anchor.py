@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 NUM_ANCHORS_X = 4
 NUM_ANCHORS_Y = 12
-ASPECT_RATIOS = [2.0, 1.5]     # w/h
-ANCHOR_SCALE = 1.5
+ASPECT_RATIOS = [1.5, 2]     # w/h
+ANCHOR_SCALE = 1
 NUM_SCALES = 1
 
 
@@ -50,6 +50,7 @@ def generate_boxes(imshape):
 
 
 if __name__ == "__main__":
+    # Visualise the anchor boxes
     imshape = (1300, 1300)
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
     ax.imshow(np.zeros(imshape))

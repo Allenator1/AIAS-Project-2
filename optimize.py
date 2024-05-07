@@ -53,7 +53,7 @@ def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
     return (best_worm, best_cost)
 
 
-def recursive_subdivision_optimisation(image, max_depth=4):
+def recursive_subdivision_optimisation(image, max_depth=4, debug=True):
     worms = []
     im_height, im_width = image.shape
 
@@ -65,13 +65,14 @@ def recursive_subdivision_optimisation(image, max_depth=4):
 
     def subdivision_worm(x, y, height, width, recursion_depth):
         best_worm, best_cost = optimise_worm(x, y, width, height, grad_y, median_img)
-        indent = "==" * (max_depth - recursion_depth)
-        print(f"{indent} Depth = {max_depth - recursion_depth} Best cost = {best_cost}")
+        if debug:
+            indent = "==" * (max_depth - recursion_depth)
+            print(f"{indent} Depth = {max_depth - recursion_depth} Best cost = {best_cost}")
 
         new_height = height // 2
         new_width = width // 2
 
-        if recursion_depth > 0 and width > 2 and height > 2:
+        if recursion_depth > 0 and new_width >= 8 and new_height >= 8:
             subdivision_worm(x, y, new_height, new_width, recursion_depth - 1)
             subdivision_worm(x + new_width, y, new_height, new_width, recursion_depth - 1)
             subdivision_worm(x, y + new_height, new_height, new_width, recursion_depth - 1)
@@ -101,12 +102,12 @@ def multiscale_optimisation(image):
     return worms
 
 
-def iterative_optimisation(image, num_iter=20):
+def iterative_optimisation(image, num_iter=50):
     worms = []
     worm_mask = np.zeros(image.shape, dtype=np.uint8)
 
-    median_img = cv2.medianBlur(image, 3)
-    grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=3))
+    median_img = cv2.medianBlur(image, 5)
+    grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=5))
     # Rescale the gradient magnitude to lie between 0 and 1
     grad_y = (grad_y - np.min(grad_y)) / (np.max(grad_y) - np.min(grad_y))
     grad_y = (grad_y > 0.10).astype(np.float32)
@@ -137,7 +138,8 @@ if __name__ == '__main__':
     image = np.flipud(image)
 
     # Generate the optimal worms
-    final_worms = iterative_optimisation(image)
+    final_worms = multiscale_optimisation(image)
+    final_worms.extend(recursive_subdivision_optimisation(image, max_depth=5))
 
     # Visualize the best worm from the final population
     drawing = util.Drawing(image)
