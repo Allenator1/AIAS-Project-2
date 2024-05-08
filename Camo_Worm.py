@@ -87,7 +87,10 @@ class Camo_Worm:
 
     def colour_at_t(self, t, image):
         """Get color of the worm at t."""
+        image = image.T # Transpose image
         intermediates = np.int64(np.round(np.array(self.bezier.point_at_t(t)).reshape(-1, 2)))
+        intermediates[:, 0] = np.clip(intermediates[:, 0], 0, image.shape[0]) # clipping the worms within image
+        intermediates[:, 1] = np.clip(intermediates[:, 1], 0, image.shape[1])  # same as above
         colours = [image[point[0], point[1]] for point in intermediates]
         return np.mean(colours) / 255  # Calculate grayscale value
 
@@ -159,7 +162,7 @@ class Clew():
             [10, 50],             # dr
             [0, np.pi],           # dgamma
             [2, 20],              # width
-            [0, 255]              # colour
+            [0, 1]                # colour
         ])
         return np.tile(bounds, (num_worms, 1))
 
