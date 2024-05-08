@@ -30,16 +30,15 @@ class FSS:
     """
     Fish School Search algorithm.
     """
-    def __init__(self, fit_func, bounds, initial_population, 
-                 school_weight=0, step_ind=0.01, step_vol=0.01, max_iter=1000):
+    def __init__(self, fit_func, bounds, initial_population, step_ind=0.01, step_vol=0.01, max_iter=1000):
         self.fit_func = fit_func
         self.bounds = bounds
         self.max_iter = max_iter
         self.generation = 0
-        self.population = [Fish(x) for x in initial_population]
+        self.population = initial_population
         self.step_ind = bounds[:, 1] - bounds[:, 0] * step_ind
         self.step_vol = (bounds[:, 1] - bounds[:, 0]) * step_vol
-        self.previous_school_wt = school_weight
+        self.previous_school_wt = np.sum([f.wt for f in self.population])
 
 
     def iterate(self):
@@ -80,8 +79,7 @@ class FSS:
             self.volitive_movement(f, barycenter)
 
         # Update the generation
-        for i in range(self.NP):
-            f = self.population[i]
+        for f in self.population:
             f.target = f.target.__class__(self.bounds, f.vector)
 
 
