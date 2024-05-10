@@ -59,7 +59,7 @@ if __name__ == "__main__":
         rect = plt.Rectangle((box[1], box[0]), box[3] - box[1], box[2] - box[0],
                              edgecolor='r', facecolor='none')
         ax.add_patch(rect)
-    ax.set_title("Anchor boxes")
-    plt.show()
+    ax.axis("off")
+    plt.savefig("output/anchor_boxes.png", bbox_inches="tight", pad_inches=0.1)
 
      

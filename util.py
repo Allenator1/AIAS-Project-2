@@ -33,7 +33,8 @@ class Drawing:
 
     def show(self, save=None):
         if save is not None:
-            plt.savefig(save)
+            self.ax.axis('off')
+            plt.savefig(save, bbox_inches='tight', pad_inches=0)
         else:
             plt.show()
         
