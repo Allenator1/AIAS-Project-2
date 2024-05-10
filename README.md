@@ -10,7 +10,7 @@ options:
   --image IMAGE         				        Path to the image
   --multiscale          				        Use multiscale optimisation
   --recursive           				        Use recursive subdivision optimisation
-  --recursive_depth RECURSIVE_DEPTH     Depth of the recursive subdivision (default depth = 4)
+  --recursive_depth RECURSIVE_DEPTH             Depth of the recursive subdivision (default depth = 4)
   --iterative           				        Use iterative optimisation
 ```
 
