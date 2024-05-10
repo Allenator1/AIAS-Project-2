@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import cv2
+import argparse
 
 from DE import DE
 from Camo_Worm import Camo_Worm
@@ -162,10 +163,24 @@ def iterative_optimisation(image, num_iter=50):
 if __name__ == '__main__':
     # Test the optimisation functions on a single image
 
-    if len(sys.argv) > 1:
-        image_path = sys.argv[1]
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--image", type=str, help="Path to the image")
+    arg_parser.add_argument("--multiscale", action="store_true", help="Use multiscale optimisation")
+    arg_parser.add_argument("--recursive", action="store_true", help="Use recursive subdivision optimisation")
+    arg_parser.add_argument("--recursive_depth", type=int, help="Depth of the recursive subdivision", default=4)
+    arg_parser.add_argument("--iterative", action="store_true", help="Use iterative optimisation")
+
+    args = arg_parser.parse_args()
+
+    if args.multiscale + args.recursive + args.iterative != 1:
+        print("Please select at least one optimisation method")
+        sys.exit(1)
+
+    if args.image is not None:
+        image_path = args.image
     else:
-        image_path = 'images/original.png'
+        image_path = "original.png"
+
     mask = [320, 560, 160, 880]  # ymin ymax xmin xmax
 
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -173,8 +188,14 @@ if __name__ == '__main__':
     image = np.flipud(image)
 
     # Generate the optimal worms
-    final_worms = multiscale_optimisation(image)
-    final_worms.extend(recursive_subdivision_optimisation(image, max_depth=4))
+    final_worms = []
+    
+    if args.multiscale:
+        final_worms.extend(multiscale_optimisation(image))
+    if args.recursive:
+        final_worms.extend(recursive_subdivision_optimisation(image, max_depth=args.recursive_depth))
+    if args.iterative:
+        final_worms.extend(iterative_optimisation(image, num_iter=50))
 
     # Visualize the best worm from the final population
     drawing = util.Drawing(image)
