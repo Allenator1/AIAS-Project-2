@@ -9,10 +9,7 @@ from anchor import generate_boxes
 from tqdm import tqdm
 import util
 
-POPULATION_SIZE = 24
-MAX_ITER = 100
-F = 0.5
-CR = 0.5
+PARAMS = {"POPULATION_SIZE": 24, "MAX_ITER": 100, "F": 0.5, "CR": 0.5, "WT_RATIO": 40, "KSIZE": 5}
 
 # Cost functions 
 
@@ -50,7 +47,7 @@ def final_cost(worm, var_map, image, worm_mask=None):
     overlap_cost = 0
     if worm_mask is not None:
         overlap_cost = minimise_overlap(worm, worm_mask)
-    return 40 * grad_cost + camo_cost + overlap_cost
+    return PARAMS["WT_RATIO"] * grad_cost + camo_cost + overlap_cost
 
 
 def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
@@ -59,7 +56,7 @@ def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
     """
     worm_bounds = (x1, x1 + width, y1, y1 + height)
     bounds = Camo_Worm.generate_bounds(worm_bounds)
-    initial_population = [Camo_Worm(bounds) for _ in range(POPULATION_SIZE)]
+    initial_population = [Camo_Worm(bounds) for _ in range(PARAMS["POPULATION_SIZE"])]
 
     cost_fn = lambda wrm: final_cost(wrm, grad_y, median_img, worm_mask)
 
@@ -67,9 +64,9 @@ def optimise_worm(x1, y1, width, height, grad_y, median_img, worm_mask=None):
         objective_function=cost_fn,
         bounds=bounds,
         initial_population=initial_population,
-        max_iter=MAX_ITER,        
-        F=F,
-        CR=CR
+        max_iter=PARAMS["MAX_ITER"],        
+        F=PARAMS["F"],
+        CR=PARAMS["CR"],
     )
 
     while de.generation < de.max_iter:
@@ -102,7 +99,7 @@ def recursive_subdivision_optimisation(image, max_depth=4, debug=True):
         new_height = height // 2
         new_width = width // 2
 
-        if recursion_depth > 0 and new_width >= 8 and new_height >= 8 and best_cost < 0.0:
+        if recursion_depth > 0 and new_width >= 8 and new_height >= 8 and best_cost != 0.0:
             subdivision_worm(x, y, new_height, new_width, recursion_depth - 1)
             subdivision_worm(x + new_width, y, new_height, new_width, recursion_depth - 1)
             subdivision_worm(x, y + new_height, new_height, new_width, recursion_depth - 1)
@@ -121,8 +118,8 @@ def multiscale_optimisation(image):
     """
     worms = []
 
-    median_img = cv2.medianBlur(image, 5)
-    grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=5))
+    median_img = cv2.medianBlur(image, PARAMS["KSIZE"])
+    grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=PARAMS["KSIZE"]))
     # Rescale the gradient magnitude to lie between 0 and 1
     grad_y = (grad_y - np.min(grad_y)) / (np.max(grad_y) - np.min(grad_y))
     grad_y = (grad_y > 0.1).astype(np.float32)
@@ -142,8 +139,8 @@ def iterative_optimisation(image, num_iter=50):
     worms = []
     worm_mask = np.zeros(image.shape, dtype=np.uint8)
 
-    median_img = cv2.medianBlur(image, 5)
-    grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=5))
+    median_img = cv2.medianBlur(image, PARAMS["KSIZE"])
+    grad_y = np.abs(cv2.Sobel(median_img, cv2.CV_64F, 0, 1, ksize=PARAMS["KSIZE"]))
     # Rescale the gradient magnitude to lie between 0 and 1
     grad_y = (grad_y - np.min(grad_y)) / (np.max(grad_y) - np.min(grad_y))
     grad_y = (grad_y > 0.10).astype(np.float32)
@@ -177,7 +174,7 @@ if __name__ == '__main__':
 
     # Generate the optimal worms
     final_worms = multiscale_optimisation(image)
-    final_worms.extend(recursive_subdivision_optimisation(image, max_depth=5))
+    final_worms.extend(recursive_subdivision_optimisation(image, max_depth=4))
 
     # Visualize the best worm from the final population
     drawing = util.Drawing(image)
