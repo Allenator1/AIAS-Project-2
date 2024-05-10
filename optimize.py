@@ -173,8 +173,7 @@ if __name__ == '__main__':
     args = arg_parser.parse_args()
 
     if args.multiscale + args.recursive + args.iterative != 1:
-        print("Please select at least one optimisation method")
-        sys.exit(1)
+        args.multiscale = True; args.recursive = True
 
     if args.image is not None:
         image_path = args.image
